@@ -15,13 +15,13 @@
 .about { 
     font-size:14px; line-height:125%; text-align: center; color: gray;
 }
-body { font-family: 'Open Sans', sans-serif; background-color:#f4f4f4; font-size:15px; line-height:18px; }
+body { font-family: sans-serif; background-color:#f4f4f4; font-size:15px; line-height:18px; }
 </style>
-<!--<script type="text/javascript"  src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>-->
 <script type="text/javascript" src="js/jquery-1.8.3.min.js"></script>
 <script type="text/javascript" src="js/jquery.flot.min.js"></script>
 <script type="text/javascript" src="js/jstat.js"></script>
 <script type="text/javascript" src="js/js_mcmc.js"></script>
+<script type="text/javascript" src="js/plot.js"></script>
 <script type="text/javascript">
 
     var burn_timeout_id
@@ -115,51 +115,7 @@ body { font-family: 'Open Sans', sans-serif; background-color:#f4f4f4; font-size
             } else {
                 write_log("\n -- Finished sampling phase --\n ")
                 write_log("-- Results plotted below --\n ")
-                $("#more_results_wrapper_div").show();
-                log_t_test()
-                show_result()
-
             }
-        }
-
-        function log_t_test() {
-            var t_res = paired_t_test(y1, y2)
-            var mean_diff = t_res[0].toPrecision(4)
-            var t = t_res[1].toPrecision(4)
-            var p = t_res[2].toPrecision(4)
-            write_log("\n-- For comparison, a standard two-tailed t-test --\n ")
-            write_log("Mean group difference: " + mean_diff + "\n ")
-            write_log("t: " + t + "\n ")
-            write_log("p: " + p + "\n ")
-
-        }
-
-        function show_result() {
-            var chain = sampler.get_chain()
-            var plot_data = chain_to_plot_data(chain, Math.ceil(n_samples / 1000))
-            mean_chains = param_chain(chain, 0).concat(param_chain(chain, 1))
-            mean_xlim = [jStat.min(mean_chains), jStat.max(mean_chains)]
-            sd_chains = param_chain(chain, 2).concat(param_chain(chain, 3))
-            sd_xlim = [jStat.min(sd_chains), jStat.max(sd_chains)]
-
-            plot_mcmc_chain("group_diff_plot", plot_data[5], "samples")
-            plot_mcmc_chain("group1_mean_plot", plot_data[0], "samples")
-            plot_mcmc_chain("group1_sd_plot", plot_data[2], "samples")
-            plot_mcmc_chain("group2_mean_plot", plot_data[1], "samples")
-            plot_mcmc_chain("group2_sd_plot", plot_data[3], "samples")
-            plot_mcmc_chain("sd_diff_plot", plot_data[6], "samples")
-            plot_mcmc_chain("normality_plot", plot_data[7], "samples")
-            plot_mcmc_chain("effect_size_plot", plot_data[8], "samples")
-
-            plot_mcmc_hist("group_diff_hist", param_chain(chain, 5), true, 0)
-            plot_mcmc_hist("group1_mean_hist", param_chain(chain, 0), true, null, mean_xlim)
-            plot_mcmc_hist("group1_sd_hist", param_chain(chain, 2), true, null, sd_xlim)
-            plot_mcmc_hist("group2_mean_hist", param_chain(chain, 1), true, null, mean_xlim)
-            plot_mcmc_hist("group2_sd_hist", param_chain(chain, 3), true, null, sd_xlim)
-            plot_mcmc_hist("sd_diff_hist", param_chain(chain, 6), true, 0)
-            plot_mcmc_hist("normality_hist", param_chain(chain, 7), true)
-            plot_mcmc_hist("effect_size_hist", param_chain(chain, 8), true, 0)
-
         }
 
         write_log("-- Started Burn in phase --\n")
@@ -215,47 +171,6 @@ body { font-family: 'Open Sans', sans-serif; background-color:#f4f4f4; font-size
                     <div class="item_description">If the 95% Highest Density Interval does not include zero there is a credible difference!</div>
                 </div>
             </div>
-            <div id="more_results_wrapper_div">
-                <div id="more_results_parent_div" class="sg-35 sgParent">
-                    <div id="more_results_div" class="sg-23 borderRight"><h2>More Results - The Rest of the Parameters!</h2> <p>Even though the difference between the means of the groups usually is the main interest, BEST also estimates other parameters. Except for the means and SDs of the groups BEST estimates a measure of to what degree there are outliers in the data that makes the distribution of the data deviate from normality. This measure is labeled "Normality" below where a normality estimate &lt; 1.5 indicates that the data isn't normally distributed. BEST is however robust to outliers to some degree while outliers are a problem for a classical t-test. More about the assumptions of BEST and the advantages of Bayesian estimation is found in <a href="http://www.indiana.edu/~kruschke/BEST/">Kruschke (2012)</a>.</p> 
-                    </div>
-                    <div id="filler_div" class="sg-11"><br/> </div>
-                </div>
-                <div id="group1_mean_plot_wrapper_div" class="sg-8"> <div class="item_title">Trace plot - Mean Group 1</div> <div id="group1_mean_plot" style="height: 175px;"></div> </div>
-                <div id="group1_mean_hist_wrapper_div" class="sg-8 borderRight"> <div class="item_title">Density - Mean Group 1</div> <div id="group1_mean_hist" style="height: 175px;"></div> </div>
-                <div id="group1_sd_plot_wrapper_div" class="sg-8"> <div class="item_title">Trace plot - SD Group 1</div> <div id="group1_sd_plot" style="height: 175px;"></div> </div>
-                <div id="group1_sd_hist_wrapper_div" class="sg-8"> <div class="item_title">Density - SD Group 1</div> <div id="group1_sd_hist" style="height: 175px;"></div> </div>
-                <div id="group2_mean_plot_wrapper_div" class="sg-8"><div class="item_title">Trace plot - Mean Group 2</div> <div id="group2_mean_plot" style="height: 175px;"></div> </div>
-                <div id="group2_mean_hist_wrapper_div" class="sg-8 borderRight"><div class="item_title">Density - Mean Group 2</div> <div id="group2_mean_hist" style="height: 175px;"></div> </div>
-                <div id="group2_sd_plot_wrapper_div" class="sg-8"><div class="item_title">Trace plot - SD Group 2</div> <div id="group2_sd_plot" style="height: 175px;"></div> </div>
-                <div id="group2_sd_hist_wrapper_div" class="sg-8"><div class="item_title">Density - SD Group 2</div> <div id="group2_sd_hist" style="height: 175px;"></div> </div>
-                <div id="normality_plot_wrapper_div" class="sg-8 "><div class="item_title">Trace plot - Normality</div> <div id="normality_plot" style="height: 175px;"></div> </div>
-                <div id="normality_hist_wrapper_div" class="sg-8 borderRight"> <div class="item_title">Density - Normality</div> <div id="normality_hist" style="height: 175px;"></div> </div>
-                
-                <div id="group_sd_diff_plot_wrapper_div" class="sg-8"><div class="item_title">Trace plot - Difference of SDs</div> <div id="sd_diff_plot" style="height: 175px;"></div> </div>
-                <div id="group_sd_diff_hist_wrapper_div" class="sg-8"><div class="item_title">Density -Difference of SDs</div> <div id="sd_diff_hist" style="height: 175px;"></div> </div>
-
-                <div id="effect_size_plot_wrapper_div" class="sg-8 "><div class="item_title">Trace plot - Effect Size</div> <div id="effect_size_plot" style="height: 175px;"></div> </div>
-                <div id="effect_size_wrapper_div" class="sg-8 borderRight"> 
-                    <div class="item_title">Density - Effect Size</div> 
-                    <div id="effect_size_hist" style="height: 175px;"></div>
-                    <div class="item_description">(μ₁ - μ₂) / sqrt( (σ₁² + σ₂²) / 2)</div>
-                </div>
-
-                
-                
-                
-
-                <div id="know_more_div" class="sg-8 borderRight">
-                    <b>A Word of Caution.</b>
-                    Even though this online version of BEST <i>should</i> give the same result as the method described by <a href="http://www.indiana.edu/~kruschke/BEST/">Kruschke (2012)</a> I don't guarantee that it <i>does</i>. Use the version freely available on his <a href="http://www.indiana.edu/~kruschke/BEST/">site</a>. If you want to know more about Bayesian statistics do check out his <a href="http://www.indiana.edu/~kruschke/DoingBayesianDataAnalysis/">book</a>, which is great, or some of the <a href="http://stats.stackexchange.com/questions/125/what-is-the-best-introductory-bayesian-statistics-textbook">many other good introductory texts</a>.
-                </div>
-                <div id="about_div" class="sg-8 borderRight">
-                    <b>About.</b>
-                    This page was made for fun by me, Rasmus Bååth, a PHD student at <a href="http://www.lucs.lu.se">Lund University Cognitive Science</a>, Sweden. Libraries used: <a href="http://www.jstat.org/">jStat</a> for probability distributions, <a href="http://www.flotcharts.org/">Flot</a> for plotting and <a href="http://jquery.com/">JQuery</a> for this and that. For css styling I used <a href="http://thesquaregrid.com/">the Square Grid framework</a>. If you have any suggestions for improvements feel free to <a href="mailto:rasmus.baath@lucs.lu.se">drop me a message</a>.
-                    
-                </div>
-            </div>
             <div class="sg-35 about "></div>
             <div class="sg-35 about "><br /><span xmlns:dct="http://purl.org/dc/terms/" href="http://purl.org/dc/dcmitype/InteractiveResource" property="dct:title" rel="dct:type">Coded by <a xmlns:cc="http://creativecommons.org/ns#" href="http://sumsar.net/" property="cc:attributionName" rel="cc:attributionURL">Rasmus Bååth</a> 2012.<br/> Licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/deed.en_US">Creative Commons Attribution-ShareAlike 3.0 Unported License</a>.</div>
             
@@ -263,19 +178,5 @@ body { font-family: 'Open Sans', sans-serif; background-color:#f4f4f4; font-size
 
     </div><!-- end #wrapper -->
 
-<script type="text/javascript">
-
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-15535612-4']);
-  _gaq.push(['_trackPageview']);
-
-  (function() {
-    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-  })();
-
-</script>
-    
 </body>
 </html>
