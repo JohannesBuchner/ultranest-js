@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en"><script id="abine.stub.Google Analytics">var abPrm={};var abNoOp=function(i,a){return (a&&a.length?a[0]:null)||true;},abSC=function(n,v){document.cookie=n+'='+v+';path=/;expires='+(new Date((new Date()).getTime()+(30000*60*60*24))).toGMTString();},abGC=function(n){return document.cookie.indexOf(n+'=')!=-1;},abAddNoOpMethods=function(o,m){m=m.split(',');for(var i=0;i<m.length;i++){if(m[i].match(/^#/)){o['get'+m[i].substr(1)]=o['set'+m[i].substr(1)]=abNoOp;}else{o[m[i]]=abNoOp;}}};var abClickEvent=function(n){if(n.click){n.click();}else{var e=n.ownerDocument.createEvent('MouseEvents');e.initMouseEvent('click',true, true, n.ownerDocument.defaultView, 1,0,0,0,0,false,false,false,false,0,null);n.dispatchEvent(e);}};var abTrkr={},abGT=function(){return abTrkr},_gat={_getTracker:abGT,_createTracker:abGT,_getTrackerByName:abGT,_anonymizeIp:abNoOp},__utmSetTrans=__utmLinkerUrl=__utmLinkPost=__utmSetVar=__utmVisitorCode=abNoOp,_gaq={_createAsyncTracker:abTrkr,_getAsyncTracker:abTrkr,push:function(a){for (var b = arguments, c = 0, d = 0; d < b.length; d++) {try {if (typeof b[d] === 'function') b[d]();else {var e = '', f = b[d][0], k = f.lastIndexOf('.');k > 0 && (e = f[z](0, k), f = f[z](k + 1));var p = e == '_gat' ? _gat : e == '_gaq' ? _gaq : _gat._getTracker(e);p[f].apply(p, b[d].slice(1))}} catch (r) {c++}}return c;}};abAddNoOpMethods(abTrkr,'_deleteCustomVar,_getName,_getAccount,_getVersion,_getVisitorCustomVar,_initData,_setAccount,_setCookiePersistence,_setCustomVar,_setSampleRate,_setSessionTimeout,_setSessionCookieTimeout,_setVar,_setVisitorCookieTimeout,_trackPageview,_setAllowAnchor,_setCampContentKey,_setCampMediumKey,_setCampNameKey,_setCampNOKey,_setCampSourceKey,_setCampTermKey,_setCampaignTrack,_setCampaignCookieTimeout,_setCookieTimeout,_setReferrerOverride,_cookiePathCopy,_getLinkerUrl,_linkByPost,_setAllowHash,_setAllowLinker,_setCookiePath,_setDomainName,_addItem,_addTrans,_trackTrans,_trackEvent,_addIgnoredOrganic,_addIgnoredRef,_addOrganic,_clearIgnoredOrganic,_clearIgnoredRef,_clearOrganic,_trackSocial,_getClientInfo,_getDetectFlash,_getDetectTitle,_setClientInfo,_setDetectFlash,_setDetectTitle,_getLocalGifPath,_getServiceMode,_setLocalGifPath,_setLocalRemoteServerMode,_setLocalServerMode,_setRemoteServerMode,_trackPageLoadTime,_addDevId');abTrkr._link=__utmLinker=function(l){if(l)location.href=l;};if(typeof(urchinTracker)=='undefined')urchinTracker=abNoOp;</script><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Bayesian Estimation Supersedes the t-test (BEST) - Online</title>
+<link href="best_files/css.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" href="best_files/squaregrid.css">
+
+<style type="text/css">
+.legendLabel {
+  font-size:11px; line-height:0px; 
+}
+.item_title, .item_description { 
+    font-size:14px; line-height:125%; text-align: center;
+}
+.about { 
+    font-size:14px; line-height:125%; text-align: center; color: gray;
+}
+body { font-family: 'Open Sans', sans-serif; background-color:#f4f4f4; font-size:15px; line-height:18px; }
+</style>
+<!--<script type="text/javascript" src="js/jquery-1.4.4.min.js"></script> -->
+ <script type="text/javascript" src="best_files/jquery_002.js"></script> 
+ <!--<script type="text/javascript" src="js/jquery-ui-1.8.9.min.js"></script>-->
+
+<script type="text/javascript" src="best_files/jquery.js"></script>
+<script type="text/javascript" src="best_files/jstat.js"></script>
+<script type="text/javascript" src="best_files/js_mcmc.js"></script>
+<script type="text/javascript">
+
+    var burn_timeout_id
+    var sample_timeout_id
+    var plot_timeout_id
+    
+    $(document).ready(function() {
+        $("#diff_plots_div").hide();
+        $("#more_results_wrapper_div").hide();
+        
+    });
+    
+    function write_log(s) {
+        $("#log").val($("#log").val() + s)
+        $("#log").scrollTop($("#log")[0].scrollHeight);
+    }
+
+    function run_BEST() {
+        write_log("\n")
+        window.clearTimeout(burn_timeout_id)
+        window.clearTimeout(sample_timeout_id)
+        window.clearTimeout(plot_timeout_id)
+        $("#start_button").html('Click to restart!');
+
+        y1 = string_to_num_array($("#data_group_1").val())
+        y2 = string_to_num_array($("#data_group_2").val())
+
+        try {
+            jStat.map(y1.concat(y2), function(x) {if(x - 0 != x) throw "ERROR"})
+        } catch(err) {
+            write_log("ERROR: Data not supplied for both groups or not formatted correctly.\n")
+            return
+        }
+
+        var n_samples = parseInt($("#nbr_of_samples_input").val()) + 10
+        var n_burnin = parseInt($("#nbr_of_burnin_input").val())
+
+
+
+
+        if(n_samples < 1 || n_burnin < 1 || n_samples - 0 != n_samples || n_burnin - 0 != n_burnin) {
+            write_log("ERROR: Nbr of burn-in samples and nbr of regular samples should be > 1, right?\n")
+            return
+        }
+
+        var posterior = make_BEST_posterior_func(y1, y2)
+
+        // Function to calculate some more statistics from the chain
+        var data_calc = function(params) {
+            var mu_diff = params[0] - params[1]
+            var sd_diff = params[2] - params[3]
+            var effect_size = (params[0] - params[1]) / Math.sqrt((Math.pow(params[2], 2) + Math.pow(params[3], 2)) / 2 )
+            var normality = Math.log(params[4]) / Math.LN10
+            return [mu_diff, sd_diff, normality, effect_size]
+        }
+
+        var inits = [jStat.mean(y1), jStat.mean(y2), jStat.stdev(y1), jStat.stdev(y2), 5]
+
+        var sampler = new amwg(inits, posterior, data_calc)
+
+        function burn_asynch(n) {
+            sampler.burn(500)
+            write_log("*")
+            if(n > 0) {
+                burn_timeout_id = setTimeout(function() {burn_asynch(n - 1)}, 0)
+            } else {
+                write_log("\n-- Finished Burn in phase --\n")
+                write_log("\n-- Started sampling phase --\n")
+                $("#diff_plots_div").show();
+                sample_timeout_id = sampler.n_samples_asynch(n_samples, 50)
+                plot_asynch()
+            }
+        }
+        
+
+        function plot_asynch() {
+            var plot_start_time = new Date()
+            var chain = sampler.get_chain()
+            var plot_data = chain_to_plot_data(chain, Math.ceil(n_samples / 1000))
+            plot_mcmc_chain("group_diff_plot", plot_data[5], "samples")
+            //plot_mcmc_chain("plot3", plot_data[2] , "title2")
+            //plot_mcmc_chain("plot5", plot_data[4], "title3")
+
+            plot_mcmc_hist("group_diff_hist", param_chain(chain, 5), true, 0)
+            //plot_mcmc_hist("plot4", param_chain(sampler.get_chain(), 2), true)
+            //plot_mcmc_hist("plot6", param_chain(sampler.get_chain(), 4), true)
+            
+            var plot_time = (new Date()) - plot_start_time
+            if(sampler.is_running_asynch()) {
+                plot_timeout_id = setTimeout(function() {plot_asynch()}, plot_time * 2 )
+            } else {
+                write_log("\n -- Finished sampling phase --\n ")
+                write_log("-- Results plotted below --\n ")
+                $("#more_results_wrapper_div").show();
+                log_t_test()
+                show_result()
+
+            }
+        }
+
+        function log_t_test() {
+            var t_res = paired_t_test(y1, y2)
+            var mean_diff = t_res[0].toPrecision(4)
+            var t = t_res[1].toPrecision(4)
+            var p = t_res[2].toPrecision(4)
+            write_log("\n-- For comparison, a standard two-tailed t-test --\n ")
+            write_log("Mean group difference: " + mean_diff + "\n ")
+            write_log("t: " + t + "\n ")
+            write_log("p: " + p + "\n ")
+
+        }
+
+        function show_result() {
+            var chain = sampler.get_chain()
+            var plot_data = chain_to_plot_data(chain, Math.ceil(n_samples / 1000))
+            mean_chains = param_chain(chain, 0).concat(param_chain(chain, 1))
+            mean_xlim = [jStat.min(mean_chains), jStat.max(mean_chains)]
+            sd_chains = param_chain(chain, 2).concat(param_chain(chain, 3))
+            sd_xlim = [jStat.min(sd_chains), jStat.max(sd_chains)]
+
+            plot_mcmc_chain("group_diff_plot", plot_data[5], "samples")
+            plot_mcmc_chain("group1_mean_plot", plot_data[0], "samples")
+            plot_mcmc_chain("group1_sd_plot", plot_data[2], "samples")
+            plot_mcmc_chain("group2_mean_plot", plot_data[1], "samples")
+            plot_mcmc_chain("group2_sd_plot", plot_data[3], "samples")
+            plot_mcmc_chain("sd_diff_plot", plot_data[6], "samples")
+            plot_mcmc_chain("normality_plot", plot_data[7], "samples")
+            plot_mcmc_chain("effect_size_plot", plot_data[8], "samples")
+
+            plot_mcmc_hist("group_diff_hist", param_chain(chain, 5), true, 0)
+            plot_mcmc_hist("group1_mean_hist", param_chain(chain, 0), true, null, mean_xlim)
+            plot_mcmc_hist("group1_sd_hist", param_chain(chain, 2), true, null, sd_xlim)
+            plot_mcmc_hist("group2_mean_hist", param_chain(chain, 1), true, null, mean_xlim)
+            plot_mcmc_hist("group2_sd_hist", param_chain(chain, 3), true, null, sd_xlim)
+            plot_mcmc_hist("sd_diff_hist", param_chain(chain, 6), true, 0)
+            plot_mcmc_hist("normality_hist", param_chain(chain, 7), true)
+            plot_mcmc_hist("effect_size_hist", param_chain(chain, 8), true, 0)
+
+        }
+
+        write_log("-- Started Burn in phase --\n")
+        burn_asynch(Math.ceil(n_burnin /  500))
+    }
+</script>
+</head>
+
+    <body>
+
+    <div id="wrapper"><!-- you need both the wrapper and container -->
+        <div id="container">
+        
+            <!-- Just an example of a layout, so you can see how it works. -->
+            <!-- Please delete this line once you're done. <style>#example-a, #example-b, #example-c, #example-d1, #example-d2{background:yellow; height:800px; margin-top:14px;filter:alpha(opacity=30); -moz-opacity:0.3; -khtml-opacity: 0.3; opacity: 0.3;}</style>-->
+            <div id="title_div" class="sg-35" style="margin: 0 14px 0px"><h1>Bayesian Estimation Supersedes the t-test (BEST) - online</h1></div>
+            <div id="data_and_log_div" class="sg-35 sgParent">
+                <div id="title_and_instructions_div" class="sg-23 borderRight">
+                    
+                    <p>
+                        This page implements an online version of John Kruschke's <a href="http://www.indiana.edu/%7Ekruschke/BEST/"><i>Bayesian estimation supersedes the t-test (BEST)</i></a>,
+ a Bayesian model that can be used where you classically would use a 
+two-sample t-test. BEST estimates the difference in means between two 
+groups and yields a probability distribution over the difference. From 
+this distribution we can take the mean credible value as our best guess 
+of the actual difference and the 95% <i>Highest Density Interval</i> 
+(HDI) as the range were the actual difference is with 95% credibility. 
+It can also be useful to look at how credible it is that the difference 
+between the two groups is &lt; 0 or &gt; 0.
+                    </p>
+                    <p>
+                        To try it out just enter some data below or run 
+with the data that is already entered, the heights in m of the winning 
+team of the 2012 NBA finals (group 1) and the winning team of Stanley 
+cup 2012 (group 2). Data can be entered in almost any way, separated by 
+spaces, commas, newlines, etc.
+                    </p>
+                    <p>
+                        The MCMC method used is an adaptive Metropolis-within-Gibbs sampler described by <a href="http://dx.doi.org/10.1198/jcgs.2009.06134">Roberts and Rosenthal (2009)</a>.
+ Everything is implemented in javascript and runs in the browser. If the
+ output looks strange try to increase the number of burn-in steps and 
+the number of sample steps.
+                    </p>
+                </div>
+                <div id="log_wrapper_div" class="sg-10"> <br><br><div class="item_title">Log</div><textarea id="log" style="width: 100%; height: 250px; box-sizing: border-box; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; ">
+-- Started Burn in phase --
+*****************************************
+-- Finished Burn in phase --
+
+-- Started sampling phase --
+
+ -- Finished sampling phase --
+ -- Results plotted below --
+ 
+-- For comparison, a standard two-tailed t-test --
+ Mean group difference: 0.1509
+ t: 7.769
+ p: 2.299e-9
+ 
+ERROR: Nbr of burn-in samples and nbr of regular samples should be &gt; 1, right?
+
+-- Started Burn in phase --
+**
+-- Finished Burn in phase --
+
+-- Started sampling phase --
+
+-- Started Burn in phase --
+**
+-- Finished Burn in phase --
+
+-- Started sampling phase --
+
+ -- Finished sampling phase --
+ -- Results plotted below --
+ 
+-- For comparison, a standard two-tailed t-test --
+ Mean group difference: 0.1509
+ t: 7.769
+ p: 2.299e-9
+ 
+-- Started Burn in phase --
+*****************************************
+-- Finished Burn in phase --
+
+-- Started sampling phase --
+
+ -- Finished sampling phase --
+ -- Results plotted below --
+ 
+-- For comparison, a standard two-tailed t-test --
+ Mean group difference: 0.1509
+ t: 7.769
+ p: 2.299e-9
+ </textarea></div>
+            </div>
+            
+            <div id="data_group_1_div" class="sg-5">
+                <!-- Lengths of the winners of the 2012 NBA Finals, Miami Heat. -->
+                <div class="item_title">Data group 1</div><textarea id="data_group_1" style="width: 100%; height: 100px; box-sizing: border-box; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; ">1.96 2.06 2.03 2.11 1.88 1.88 2.08 1.93 2.03 2.03 2.03 2.08 2.03 2.11 1.93</textarea>
+
+                <!-- Lengths of 2012 Stanley cup winners, Los Angeles Kings. -->
+                <div class="item_title">Data group 2</div><textarea id="data_group_2" style="width: 100%; height: 100px; box-sizing: border-box; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; ">1.83 1.93 1.88 1.85 1.85 1.91 1.91 1.85 1.78 1.91 1.93 1.80 1.80 1.85 1.93 1.85 1.83 1.85 1.91 1.85 1.91 1.85 1.80 1.80 1.85</textarea>
+            </div>
+
+            <div abineguid="74E645E39A094AF0959881899866CC0B" id="start_button_div" class="sg-7">
+                <img src="best_files/instructions.png">
+                <div class="item_title">Nbr of burn-in samples</div>
+                <input id="nbr_of_burnin_input" name="nbr_of_burnin" style="width: 100%;" value="20000" type="text">
+                <div class="item_title">Nbr of samples</div>
+                <input id="nbr_of_samples_input" name="nbr_of_samples" value="20000" style="width: 100%;" type="text">
+                <button id="start_button" type="button" onclick="run_BEST()" style="width: 100%; height: 40px">Click to restart!</button>
+            </div>
+            
+            <div style="display: block;" id="diff_plots_div">
+                <div id="group_diff_plot_wrapper_div" class="sg-8">
+                     <div class="item_title">Trace Plot - Difference of Means</div>
+                    <div id="group_diff_plot" style="height: 200px; padding: 0px; position: relative;"><canvas height="200" width="224" class="base"></canvas><canvas style="position: absolute; left: 0px; top: 0px;" height="200" width="224" class="overlay"></canvas><div class="tickLabels" style="font-size:smaller"><div class="xAxis x1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:center;left:13px;top:182px;width:37px">0</div><div class="tickLabel" style="position:absolute;text-align:center;left:60px;top:182px;width:37px">5000</div><div class="tickLabel" style="position:absolute;text-align:center;left:107px;top:182px;width:37px">10000</div><div class="tickLabel" style="position:absolute;text-align:center;left:154px;top:182px;width:37px">15000</div><div class="tickLabel" style="position:absolute;text-align:center;left:201px;top:182px;width:37px">20000</div></div><div class="yAxis y1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:right;top:166px;right:200px;width:24px">0.05</div><div class="tickLabel" style="position:absolute;text-align:right;top:132px;right:200px;width:24px">0.10</div><div class="tickLabel" style="position:absolute;text-align:right;top:98px;right:200px;width:24px">0.15</div><div class="tickLabel" style="position:absolute;text-align:right;top:63px;right:200px;width:24px">0.20</div><div class="tickLabel" style="position:absolute;text-align:right;top:29px;right:200px;width:24px">0.25</div><div class="tickLabel" style="position:absolute;text-align:right;top:-5px;right:200px;width:24px">0.30</div></div></div><div class="legend"><div style="position: absolute; width: 70px; height: 20px; top: 9px; right: 9px; background-color: rgb(255, 255, 255); opacity: 0.85;"> </div><table style="position:absolute;top:9px;right:9px;;font-size:smaller;color:#545454"><tbody><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(237,194,64);overflow:hidden"></div></div></td><td class="legendLabel">samples</td></tr></tbody></table></div></div> 
+                    <div class="item_description">Should look like a "hairy caterpillar"...</div>
+                </div>
+                <div id="group_diff_hist_wrapper_div" class="sg-11">
+                     <div class="item_title">Distribution - Difference of Means</div>
+                    <div id="group_diff_hist" style="height: 200px; padding: 0px; position: relative;"><canvas height="200" width="308" class="base"></canvas><canvas style="position: absolute; left: 0px; top: 0px;" height="200" width="308" class="overlay"></canvas><div class="tickLabels" style="font-size:smaller"><div class="xAxis x1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:center;left:13px;top:182px;width:44px">0.00</div><div class="tickLabel" style="position:absolute;text-align:center;left:60px;top:182px;width:44px">0.05</div><div class="tickLabel" style="position:absolute;text-align:center;left:108px;top:182px;width:44px">0.10</div><div class="tickLabel" style="position:absolute;text-align:center;left:155px;top:182px;width:44px">0.15</div><div class="tickLabel" style="position:absolute;text-align:center;left:202px;top:182px;width:44px">0.20</div><div class="tickLabel" style="position:absolute;text-align:center;left:249px;top:182px;width:44px">0.25</div></div><div class="yAxis y1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:right;top:166px;right:280px;width:28px">0</div><div class="tickLabel" style="position:absolute;text-align:right;top:132px;right:280px;width:28px">1000</div><div class="tickLabel" style="position:absolute;text-align:right;top:98px;right:280px;width:28px">2000</div><div class="tickLabel" style="position:absolute;text-align:right;top:63px;right:280px;width:28px">3000</div><div class="tickLabel" style="position:absolute;text-align:right;top:29px;right:280px;width:28px">4000</div><div class="tickLabel" style="position:absolute;text-align:right;top:-5px;right:280px;width:28px">5000</div></div></div><div class="legend"><div style="position: absolute; width: 140px; height: 56px; top: 9px; right: 9px; background-color: rgb(255, 255, 255); opacity: 0.85;"> </div><table style="position:absolute;top:9px;right:9px;;font-size:smaller;color:#545454"><tbody><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(175,216,248);overflow:hidden"></div></div></td><td class="legendLabel">0.00% &lt; 0 &lt; 100%</td></tr><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(203,75,75);overflow:hidden"></div></div></td><td class="legendLabel">95% HDI (0.104, 0.202)</td></tr><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(77,167,77);overflow:hidden"></div></div></td><td class="legendLabel">Mean: 0.152</td></tr></tbody></table></div></div>
+                    <div class="item_description">If the 95% Highest Density Interval does not include zero there is a credible difference!</div>
+                </div>
+            </div>
+            <div style="display: block;" id="more_results_wrapper_div">
+                <div id="more_results_parent_div" class="sg-35 sgParent">
+                    <div id="more_results_div" class="sg-23 borderRight"><h2>More Results - The Rest of the Parameters!</h2> <p>Even
+ though the difference between the means of the groups usually is the 
+main interest, BEST also estimates other parameters. Except for the 
+means and SDs of the groups BEST estimates a measure of to what degree 
+there are outliers in the data that makes the distribution of the data 
+deviate from normality. This measure is labeled "Normality" below where a
+ normality estimate &lt; 1.5 indicates that the data isn't normally 
+distributed. BEST is however robust to outliers to some degree while 
+outliers are a problem for a classical t-test. More about the 
+assumptions of BEST and the advantages of Bayesian estimation is found 
+in <a href="http://www.indiana.edu/%7Ekruschke/BEST/">Kruschke (2012)</a>.</p> 
+                    </div>
+                    <div id="filler_div" class="sg-11"><br> </div>
+                </div>
+                <div id="group1_mean_plot_wrapper_div" class="sg-8"> <div class="item_title">Trace plot - Mean Group 1</div> <div id="group1_mean_plot" style="height: 175px; padding: 0px; position: relative;"><canvas height="175" width="224" class="base"></canvas><canvas style="position: absolute; left: 0px; top: 0px;" height="175" width="224" class="overlay"></canvas><div class="tickLabels" style="font-size:smaller"><div class="xAxis x1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:center;left:13px;top:157px;width:37px">0</div><div class="tickLabel" style="position:absolute;text-align:center;left:60px;top:157px;width:37px">5000</div><div class="tickLabel" style="position:absolute;text-align:center;left:107px;top:157px;width:37px">10000</div><div class="tickLabel" style="position:absolute;text-align:center;left:154px;top:157px;width:37px">15000</div><div class="tickLabel" style="position:absolute;text-align:center;left:201px;top:157px;width:37px">20000</div></div><div class="yAxis y1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:right;top:141px;right:200px;width:24px">1.90</div><div class="tickLabel" style="position:absolute;text-align:right;top:112px;right:200px;width:24px">1.95</div><div class="tickLabel" style="position:absolute;text-align:right;top:83px;right:200px;width:24px">2.00</div><div class="tickLabel" style="position:absolute;text-align:right;top:53px;right:200px;width:24px">2.05</div><div class="tickLabel" style="position:absolute;text-align:right;top:24px;right:200px;width:24px">2.10</div><div class="tickLabel" style="position:absolute;text-align:right;top:-5px;right:200px;width:24px">2.15</div></div></div><div class="legend"><div style="position: absolute; width: 70px; height: 20px; top: 9px; right: 9px; background-color: rgb(255, 255, 255); opacity: 0.85;"> </div><table style="position:absolute;top:9px;right:9px;;font-size:smaller;color:#545454"><tbody><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(237,194,64);overflow:hidden"></div></div></td><td class="legendLabel">samples</td></tr></tbody></table></div></div> </div>
+                <div id="group1_mean_hist_wrapper_div" class="sg-8 borderRight"> <div class="item_title">Density - Mean Group 1</div> <div id="group1_mean_hist" style="height: 175px; padding: 0px; position: relative;"><canvas height="175" width="224" class="base"></canvas><canvas style="position: absolute; left: 0px; top: 0px;" height="175" width="224" class="overlay"></canvas><div class="tickLabels" style="font-size:smaller"><div class="xAxis x1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:center;left:42px;top:157px;width:28px">1.85</div><div class="tickLabel" style="position:absolute;text-align:center;left:72px;top:157px;width:28px">1.90</div><div class="tickLabel" style="position:absolute;text-align:center;left:103px;top:157px;width:28px">1.95</div><div class="tickLabel" style="position:absolute;text-align:center;left:134px;top:157px;width:28px">2.00</div><div class="tickLabel" style="position:absolute;text-align:center;left:164px;top:157px;width:28px">2.05</div><div class="tickLabel" style="position:absolute;text-align:center;left:195px;top:157px;width:28px">2.10</div></div><div class="yAxis y1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:right;top:141px;right:196px;width:28px">0</div><div class="tickLabel" style="position:absolute;text-align:right;top:112px;right:196px;width:28px">1000</div><div class="tickLabel" style="position:absolute;text-align:right;top:83px;right:196px;width:28px">2000</div><div class="tickLabel" style="position:absolute;text-align:right;top:53px;right:196px;width:28px">3000</div><div class="tickLabel" style="position:absolute;text-align:right;top:24px;right:196px;width:28px">4000</div><div class="tickLabel" style="position:absolute;text-align:right;top:-5px;right:196px;width:28px">5000</div></div></div><div class="legend"><div style="position: absolute; width: 128px; height: 38px; top: 9px; right: 9px; background-color: rgb(255, 255, 255); opacity: 0.85;"> </div><table style="position:absolute;top:9px;right:9px;;font-size:smaller;color:#545454"><tbody><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(203,75,75);overflow:hidden"></div></div></td><td class="legendLabel">95% HDI (1.97, 2.06)</td></tr><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(77,167,77);overflow:hidden"></div></div></td><td class="legendLabel">Mean: 2.01</td></tr></tbody></table></div></div> </div>
+                <div id="group1_sd_plot_wrapper_div" class="sg-8"> <div class="item_title">Trace plot - SD Group 1</div> <div id="group1_sd_plot" style="height: 175px; padding: 0px; position: relative;"><canvas height="175" width="224" class="base"></canvas><canvas style="position: absolute; left: 0px; top: 0px;" height="175" width="224" class="overlay"></canvas><div class="tickLabels" style="font-size:smaller"><div class="xAxis x1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:center;left:13px;top:157px;width:37px">0</div><div class="tickLabel" style="position:absolute;text-align:center;left:60px;top:157px;width:37px">5000</div><div class="tickLabel" style="position:absolute;text-align:center;left:107px;top:157px;width:37px">10000</div><div class="tickLabel" style="position:absolute;text-align:center;left:154px;top:157px;width:37px">15000</div><div class="tickLabel" style="position:absolute;text-align:center;left:201px;top:157px;width:37px">20000</div></div><div class="yAxis y1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:right;top:141px;right:200px;width:24px">0.00</div><div class="tickLabel" style="position:absolute;text-align:right;top:105px;right:200px;width:24px">0.05</div><div class="tickLabel" style="position:absolute;text-align:right;top:68px;right:200px;width:24px">0.10</div><div class="tickLabel" style="position:absolute;text-align:right;top:31px;right:200px;width:24px">0.15</div><div class="tickLabel" style="position:absolute;text-align:right;top:-5px;right:200px;width:24px">0.20</div></div></div><div class="legend"><div style="position: absolute; width: 70px; height: 20px; top: 9px; right: 9px; background-color: rgb(255, 255, 255); opacity: 0.85;"> </div><table style="position:absolute;top:9px;right:9px;;font-size:smaller;color:#545454"><tbody><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(237,194,64);overflow:hidden"></div></div></td><td class="legendLabel">samples</td></tr></tbody></table></div></div> </div>
+                <div id="group1_sd_hist_wrapper_div" class="sg-8"> <div class="item_title">Density - SD Group 1</div> <div id="group1_sd_hist" style="height: 175px; padding: 0px; position: relative;"><canvas height="175" width="224" class="base"></canvas><canvas style="position: absolute; left: 0px; top: 0px;" height="175" width="224" class="overlay"></canvas><div class="tickLabels" style="font-size:smaller"><div class="xAxis x1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:center;left:43px;top:157px;width:44px">0.05</div><div class="tickLabel" style="position:absolute;text-align:center;left:96px;top:157px;width:44px">0.10</div><div class="tickLabel" style="position:absolute;text-align:center;left:148px;top:157px;width:44px">0.15</div></div><div class="yAxis y1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:right;top:141px;right:196px;width:28px">0</div><div class="tickLabel" style="position:absolute;text-align:right;top:112px;right:196px;width:28px">1000</div><div class="tickLabel" style="position:absolute;text-align:right;top:83px;right:196px;width:28px">2000</div><div class="tickLabel" style="position:absolute;text-align:right;top:53px;right:196px;width:28px">3000</div><div class="tickLabel" style="position:absolute;text-align:right;top:24px;right:196px;width:28px">4000</div><div class="tickLabel" style="position:absolute;text-align:right;top:-5px;right:196px;width:28px">5000</div></div></div><div class="legend"><div style="position: absolute; width: 146px; height: 38px; top: 9px; right: 9px; background-color: rgb(255, 255, 255); opacity: 0.85;"> </div><table style="position:absolute;top:9px;right:9px;;font-size:smaller;color:#545454"><tbody><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(203,75,75);overflow:hidden"></div></div></td><td class="legendLabel">95% HDI (0.0515, 0.120)</td></tr><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(77,167,77);overflow:hidden"></div></div></td><td class="legendLabel">Mean: 0.0830</td></tr></tbody></table></div></div> </div>
+                <div id="group2_mean_plot_wrapper_div" class="sg-8"><div class="item_title">Trace plot - Mean Group 2</div> <div id="group2_mean_plot" style="height: 175px; padding: 0px; position: relative;"><canvas height="175" width="224" class="base"></canvas><canvas style="position: absolute; left: 0px; top: 0px;" height="175" width="224" class="overlay"></canvas><div class="tickLabels" style="font-size:smaller"><div class="xAxis x1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:center;left:13px;top:157px;width:37px">0</div><div class="tickLabel" style="position:absolute;text-align:center;left:60px;top:157px;width:37px">5000</div><div class="tickLabel" style="position:absolute;text-align:center;left:107px;top:157px;width:37px">10000</div><div class="tickLabel" style="position:absolute;text-align:center;left:154px;top:157px;width:37px">15000</div><div class="tickLabel" style="position:absolute;text-align:center;left:201px;top:157px;width:37px">20000</div></div><div class="yAxis y1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:right;top:141px;right:200px;width:24px">1.82</div><div class="tickLabel" style="position:absolute;text-align:right;top:105px;right:200px;width:24px">1.84</div><div class="tickLabel" style="position:absolute;text-align:right;top:68px;right:200px;width:24px">1.86</div><div class="tickLabel" style="position:absolute;text-align:right;top:32px;right:200px;width:24px">1.88</div><div class="tickLabel" style="position:absolute;text-align:right;top:-5px;right:200px;width:24px">1.90</div></div></div><div class="legend"><div style="position: absolute; width: 70px; height: 20px; top: 9px; right: 9px; background-color: rgb(255, 255, 255); opacity: 0.85;"> </div><table style="position:absolute;top:9px;right:9px;;font-size:smaller;color:#545454"><tbody><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(237,194,64);overflow:hidden"></div></div></td><td class="legendLabel">samples</td></tr></tbody></table></div></div> </div>
+                <div id="group2_mean_hist_wrapper_div" class="sg-8 borderRight"><div class="item_title">Density - Mean Group 2</div> <div id="group2_mean_hist" style="height: 175px; padding: 0px; position: relative;"><canvas height="175" width="224" class="base"></canvas><canvas style="position: absolute; left: 0px; top: 0px;" height="175" width="224" class="overlay"></canvas><div class="tickLabels" style="font-size:smaller"><div class="xAxis x1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:center;left:42px;top:157px;width:28px">1.85</div><div class="tickLabel" style="position:absolute;text-align:center;left:72px;top:157px;width:28px">1.90</div><div class="tickLabel" style="position:absolute;text-align:center;left:103px;top:157px;width:28px">1.95</div><div class="tickLabel" style="position:absolute;text-align:center;left:134px;top:157px;width:28px">2.00</div><div class="tickLabel" style="position:absolute;text-align:center;left:164px;top:157px;width:28px">2.05</div><div class="tickLabel" style="position:absolute;text-align:center;left:195px;top:157px;width:28px">2.10</div></div><div class="yAxis y1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:right;top:141px;right:196px;width:28px">0</div><div class="tickLabel" style="position:absolute;text-align:right;top:105px;right:196px;width:28px">1000</div><div class="tickLabel" style="position:absolute;text-align:right;top:68px;right:196px;width:28px">2000</div><div class="tickLabel" style="position:absolute;text-align:right;top:32px;right:196px;width:28px">3000</div><div class="tickLabel" style="position:absolute;text-align:right;top:-5px;right:196px;width:28px">4000</div></div></div><div class="legend"><div style="position: absolute; width: 128px; height: 38px; top: 9px; right: 9px; background-color: rgb(255, 255, 255); opacity: 0.85;"> </div><table style="position:absolute;top:9px;right:9px;;font-size:smaller;color:#545454"><tbody><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(203,75,75);overflow:hidden"></div></div></td><td class="legendLabel">95% HDI (1.84, 1.88)</td></tr><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(77,167,77);overflow:hidden"></div></div></td><td class="legendLabel">Mean: 1.86</td></tr></tbody></table></div></div> </div>
+                <div id="group2_sd_plot_wrapper_div" class="sg-8"><div class="item_title">Trace plot - SD Group 2</div> <div id="group2_sd_plot" style="height: 175px; padding: 0px; position: relative;"><canvas height="175" width="224" class="base"></canvas><canvas style="position: absolute; left: 0px; top: 0px;" height="175" width="224" class="overlay"></canvas><div class="tickLabels" style="font-size:smaller"><div class="xAxis x1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:center;left:13px;top:157px;width:37px">0</div><div class="tickLabel" style="position:absolute;text-align:center;left:60px;top:157px;width:37px">5000</div><div class="tickLabel" style="position:absolute;text-align:center;left:107px;top:157px;width:37px">10000</div><div class="tickLabel" style="position:absolute;text-align:center;left:154px;top:157px;width:37px">15000</div><div class="tickLabel" style="position:absolute;text-align:center;left:201px;top:157px;width:37px">20000</div></div><div class="yAxis y1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:right;top:141px;right:200px;width:24px">0.02</div><div class="tickLabel" style="position:absolute;text-align:right;top:120px;right:200px;width:24px">0.03</div><div class="tickLabel" style="position:absolute;text-align:right;top:99px;right:200px;width:24px">0.04</div><div class="tickLabel" style="position:absolute;text-align:right;top:78px;right:200px;width:24px">0.05</div><div class="tickLabel" style="position:absolute;text-align:right;top:58px;right:200px;width:24px">0.06</div><div class="tickLabel" style="position:absolute;text-align:right;top:37px;right:200px;width:24px">0.07</div><div class="tickLabel" style="position:absolute;text-align:right;top:16px;right:200px;width:24px">0.08</div><div class="tickLabel" style="position:absolute;text-align:right;top:-5px;right:200px;width:24px">0.09</div></div></div><div class="legend"><div style="position: absolute; width: 70px; height: 20px; top: 9px; right: 9px; background-color: rgb(255, 255, 255); opacity: 0.85;"> </div><table style="position:absolute;top:9px;right:9px;;font-size:smaller;color:#545454"><tbody><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(237,194,64);overflow:hidden"></div></div></td><td class="legendLabel">samples</td></tr></tbody></table></div></div> </div>
+                <div id="group2_sd_hist_wrapper_div" class="sg-8"><div class="item_title">Density - SD Group 2</div> <div id="group2_sd_hist" style="height: 175px; padding: 0px; position: relative;"><canvas height="175" width="224" class="base"></canvas><canvas style="position: absolute; left: 0px; top: 0px;" height="175" width="224" class="overlay"></canvas><div class="tickLabels" style="font-size:smaller"><div class="xAxis x1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:center;left:43px;top:157px;width:44px">0.05</div><div class="tickLabel" style="position:absolute;text-align:center;left:96px;top:157px;width:44px">0.10</div><div class="tickLabel" style="position:absolute;text-align:center;left:148px;top:157px;width:44px">0.15</div></div><div class="yAxis y1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:right;top:141px;right:196px;width:28px">0</div><div class="tickLabel" style="position:absolute;text-align:right;top:112px;right:196px;width:28px">1000</div><div class="tickLabel" style="position:absolute;text-align:right;top:83px;right:196px;width:28px">2000</div><div class="tickLabel" style="position:absolute;text-align:right;top:53px;right:196px;width:28px">3000</div><div class="tickLabel" style="position:absolute;text-align:right;top:24px;right:196px;width:28px">4000</div><div class="tickLabel" style="position:absolute;text-align:right;top:-5px;right:196px;width:28px">5000</div></div></div><div class="legend"><div style="position: absolute; width: 152px; height: 38px; top: 9px; right: 9px; background-color: rgb(255, 255, 255); opacity: 0.85;"> </div><table style="position:absolute;top:9px;right:9px;;font-size:smaller;color:#545454"><tbody><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(203,75,75);overflow:hidden"></div></div></td><td class="legendLabel">95% HDI (0.0341, 0.0633)</td></tr><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(77,167,77);overflow:hidden"></div></div></td><td class="legendLabel">Mean: 0.0479</td></tr></tbody></table></div></div> </div>
+                <div id="normality_plot_wrapper_div" class="sg-8 "><div class="item_title">Trace plot - Normality</div> <div id="normality_plot" style="height: 175px; padding: 0px; position: relative;"><canvas height="175" width="224" class="base"></canvas><canvas style="position: absolute; left: 0px; top: 0px;" height="175" width="224" class="overlay"></canvas><div class="tickLabels" style="font-size:smaller"><div class="xAxis x1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:center;left:6px;top:157px;width:37px">0</div><div class="tickLabel" style="position:absolute;text-align:center;left:54px;top:157px;width:37px">5000</div><div class="tickLabel" style="position:absolute;text-align:center;left:103px;top:157px;width:37px">10000</div><div class="tickLabel" style="position:absolute;text-align:center;left:152px;top:157px;width:37px">15000</div><div class="tickLabel" style="position:absolute;text-align:center;left:201px;top:157px;width:37px">20000</div></div><div class="yAxis y1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:right;top:141px;right:207px;width:17px">0.0</div><div class="tickLabel" style="position:absolute;text-align:right;top:112px;right:207px;width:17px">0.5</div><div class="tickLabel" style="position:absolute;text-align:right;top:83px;right:207px;width:17px">1.0</div><div class="tickLabel" style="position:absolute;text-align:right;top:53px;right:207px;width:17px">1.5</div><div class="tickLabel" style="position:absolute;text-align:right;top:24px;right:207px;width:17px">2.0</div><div class="tickLabel" style="position:absolute;text-align:right;top:-5px;right:207px;width:17px">2.5</div></div></div><div class="legend"><div style="position: absolute; width: 70px; height: 20px; top: 9px; right: 9px; background-color: rgb(255, 255, 255); opacity: 0.85;"> </div><table style="position:absolute;top:9px;right:9px;;font-size:smaller;color:#545454"><tbody><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(237,194,64);overflow:hidden"></div></div></td><td class="legendLabel">samples</td></tr></tbody></table></div></div> </div>
+                <div id="normality_hist_wrapper_div" class="sg-8 borderRight"> <div class="item_title">Density - Normality</div> <div id="normality_hist" style="height: 175px; padding: 0px; position: relative;"><canvas height="175" width="224" class="base"></canvas><canvas style="position: absolute; left: 0px; top: 0px;" height="175" width="224" class="overlay"></canvas><div class="tickLabels" style="font-size:smaller"><div class="xAxis x1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:center;left:37px;top:157px;width:37px">0.5</div><div class="tickLabel" style="position:absolute;text-align:center;left:82px;top:157px;width:37px">1.0</div><div class="tickLabel" style="position:absolute;text-align:center;left:127px;top:157px;width:37px">1.5</div><div class="tickLabel" style="position:absolute;text-align:center;left:172px;top:157px;width:37px">2.0</div></div><div class="yAxis y1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:right;top:141px;right:196px;width:28px">0</div><div class="tickLabel" style="position:absolute;text-align:right;top:117px;right:196px;width:28px">500</div><div class="tickLabel" style="position:absolute;text-align:right;top:92px;right:196px;width:28px">1000</div><div class="tickLabel" style="position:absolute;text-align:right;top:68px;right:196px;width:28px">1500</div><div class="tickLabel" style="position:absolute;text-align:right;top:44px;right:196px;width:28px">2000</div><div class="tickLabel" style="position:absolute;text-align:right;top:19px;right:196px;width:28px">2500</div><div class="tickLabel" style="position:absolute;text-align:right;top:-5px;right:196px;width:28px">3000</div></div></div><div class="legend"><div style="position: absolute; width: 134px; height: 38px; top: 9px; right: 9px; background-color: rgb(255, 255, 255); opacity: 0.85;"> </div><table style="position:absolute;top:9px;right:9px;;font-size:smaller;color:#545454"><tbody><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(203,75,75);overflow:hidden"></div></div></td><td class="legendLabel">95% HDI (0.868, 2.11)</td></tr><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(77,167,77);overflow:hidden"></div></div></td><td class="legendLabel">Mean: 1.49</td></tr></tbody></table></div></div> </div>
+                
+                <div id="group_sd_diff_plot_wrapper_div" class="sg-8"><div class="item_title">Trace plot - Difference of SDs</div> <div id="sd_diff_plot" style="height: 175px; padding: 0px; position: relative;"><canvas height="175" width="224" class="base"></canvas><canvas style="position: absolute; left: 0px; top: 0px;" height="175" width="224" class="overlay"></canvas><div class="tickLabels" style="font-size:smaller"><div class="xAxis x1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:center;left:17px;top:157px;width:37px">0</div><div class="tickLabel" style="position:absolute;text-align:center;left:63px;top:157px;width:37px">5000</div><div class="tickLabel" style="position:absolute;text-align:center;left:109px;top:157px;width:37px">10000</div><div class="tickLabel" style="position:absolute;text-align:center;left:155px;top:157px;width:37px">15000</div><div class="tickLabel" style="position:absolute;text-align:center;left:201px;top:157px;width:37px">20000</div></div><div class="yAxis y1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:right;top:141px;right:196px;width:28px">-0.05</div><div class="tickLabel" style="position:absolute;text-align:right;top:105px;right:196px;width:28px">0.00</div><div class="tickLabel" style="position:absolute;text-align:right;top:68px;right:196px;width:28px">0.05</div><div class="tickLabel" style="position:absolute;text-align:right;top:32px;right:196px;width:28px">0.10</div><div class="tickLabel" style="position:absolute;text-align:right;top:-5px;right:196px;width:28px">0.15</div></div></div><div class="legend"><div style="position: absolute; width: 70px; height: 20px; top: 9px; right: 9px; background-color: rgb(255, 255, 255); opacity: 0.85;"> </div><table style="position:absolute;top:9px;right:9px;;font-size:smaller;color:#545454"><tbody><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(237,194,64);overflow:hidden"></div></div></td><td class="legendLabel">samples</td></tr></tbody></table></div></div> </div>
+                <div id="group_sd_diff_hist_wrapper_div" class="sg-8"><div class="item_title">Density -Difference of SDs</div> <div id="sd_diff_hist" style="height: 175px; padding: 0px; position: relative;"><canvas height="175" width="224" class="base"></canvas><canvas style="position: absolute; left: 0px; top: 0px;" height="175" width="224" class="overlay"></canvas><div class="tickLabels" style="font-size:smaller"><div class="xAxis x1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:center;left:21px;top:157px;width:32px">-0.05</div><div class="tickLabel" style="position:absolute;text-align:center;left:66px;top:157px;width:32px">0.00</div><div class="tickLabel" style="position:absolute;text-align:center;left:112px;top:157px;width:32px">0.05</div><div class="tickLabel" style="position:absolute;text-align:center;left:158px;top:157px;width:32px">0.10</div><div class="tickLabel" style="position:absolute;text-align:center;left:204px;top:157px;width:32px">0.15</div></div><div class="yAxis y1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:right;top:141px;right:196px;width:28px">0</div><div class="tickLabel" style="position:absolute;text-align:right;top:112px;right:196px;width:28px">1000</div><div class="tickLabel" style="position:absolute;text-align:right;top:83px;right:196px;width:28px">2000</div><div class="tickLabel" style="position:absolute;text-align:right;top:53px;right:196px;width:28px">3000</div><div class="tickLabel" style="position:absolute;text-align:right;top:24px;right:196px;width:28px">4000</div><div class="tickLabel" style="position:absolute;text-align:right;top:-5px;right:196px;width:28px">5000</div></div></div><div class="legend"><div style="position: absolute; width: 168px; height: 56px; top: 9px; right: 9px; background-color: rgb(255, 255, 255); opacity: 0.85;"> </div><table style="position:absolute;top:9px;right:9px;;font-size:smaller;color:#545454"><tbody><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(175,216,248);overflow:hidden"></div></div></td><td class="legendLabel">1.85% &lt; 0 &lt; 98.2%</td></tr><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(203,75,75);overflow:hidden"></div></div></td><td class="legendLabel">95% HDI (-0.000674, 0.0769)</td></tr><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(77,167,77);overflow:hidden"></div></div></td><td class="legendLabel">Mean: 0.0351</td></tr></tbody></table></div></div> </div>
+
+                <div id="effect_size_plot_wrapper_div" class="sg-8 "><div class="item_title">Trace plot - Effect Size</div> <div id="effect_size_plot" style="height: 175px; padding: 0px; position: relative;"><canvas height="175" width="224" class="base"></canvas><canvas style="position: absolute; left: 0px; top: 0px;" height="175" width="224" class="overlay"></canvas><div class="tickLabels" style="font-size:smaller"><div class="xAxis x1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:center;left:6px;top:157px;width:37px">0</div><div class="tickLabel" style="position:absolute;text-align:center;left:54px;top:157px;width:37px">5000</div><div class="tickLabel" style="position:absolute;text-align:center;left:103px;top:157px;width:37px">10000</div><div class="tickLabel" style="position:absolute;text-align:center;left:152px;top:157px;width:37px">15000</div><div class="tickLabel" style="position:absolute;text-align:center;left:201px;top:157px;width:37px">20000</div></div><div class="yAxis y1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:right;top:141px;right:207px;width:17px">0.0</div><div class="tickLabel" style="position:absolute;text-align:right;top:105px;right:207px;width:17px">1.0</div><div class="tickLabel" style="position:absolute;text-align:right;top:68px;right:207px;width:17px">2.0</div><div class="tickLabel" style="position:absolute;text-align:right;top:32px;right:207px;width:17px">3.0</div><div class="tickLabel" style="position:absolute;text-align:right;top:-5px;right:207px;width:17px">4.0</div></div></div><div class="legend"><div style="position: absolute; width: 70px; height: 20px; top: 9px; right: 9px; background-color: rgb(255, 255, 255); opacity: 0.85;"> </div><table style="position:absolute;top:9px;right:9px;;font-size:smaller;color:#545454"><tbody><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(237,194,64);overflow:hidden"></div></div></td><td class="legendLabel">samples</td></tr></tbody></table></div></div> </div>
+                <div id="effect_size_wrapper_div" class="sg-8 borderRight"> 
+                    <div class="item_title">Density - Effect Size</div> 
+                    <div id="effect_size_hist" style="height: 175px; padding: 0px; position: relative;"><canvas height="175" width="224" class="base"></canvas><canvas style="position: absolute; left: 0px; top: 0px;" height="175" width="224" class="overlay"></canvas><div class="tickLabels" style="font-size:smaller"><div class="xAxis x1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:center;left:17px;top:157px;width:37px">0</div><div class="tickLabel" style="position:absolute;text-align:center;left:57px;top:157px;width:37px">1</div><div class="tickLabel" style="position:absolute;text-align:center;left:97px;top:157px;width:37px">2</div><div class="tickLabel" style="position:absolute;text-align:center;left:137px;top:157px;width:37px">3</div><div class="tickLabel" style="position:absolute;text-align:center;left:177px;top:157px;width:37px">4</div></div><div class="yAxis y1Axis" style="color:#545454"><div class="tickLabel" style="position:absolute;text-align:right;top:141px;right:196px;width:28px">0</div><div class="tickLabel" style="position:absolute;text-align:right;top:105px;right:196px;width:28px">1000</div><div class="tickLabel" style="position:absolute;text-align:right;top:68px;right:196px;width:28px">2000</div><div class="tickLabel" style="position:absolute;text-align:right;top:32px;right:196px;width:28px">3000</div><div class="tickLabel" style="position:absolute;text-align:right;top:-5px;right:196px;width:28px">4000</div></div></div><div class="legend"><div style="position: absolute; width: 128px; height: 56px; top: 9px; right: 9px; background-color: rgb(255, 255, 255); opacity: 0.85;"> </div><table style="position:absolute;top:9px;right:9px;;font-size:smaller;color:#545454"><tbody><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(175,216,248);overflow:hidden"></div></div></td><td class="legendLabel">0.00% &lt; 0 &lt; 100%</td></tr><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(203,75,75);overflow:hidden"></div></div></td><td class="legendLabel">95% HDI (1.23, 3.28)</td></tr><tr><td class="legendColorBox"><div style="border:1px solid #ccc;padding:1px"><div style="width:4px;height:0;border:5px solid rgb(77,167,77);overflow:hidden"></div></div></td><td class="legendLabel">Mean: 2.30</td></tr></tbody></table></div></div>
+                    <div class="item_description">(μ₁ - μ₂) / sqrt( (σ₁² + σ₂²) / 2)</div>
+                </div>
+
+                
+                
+                
+
+                <div id="know_more_div" class="sg-8 borderRight">
+                    <b>A Word of Caution.</b>
+                    Even though this online version of BEST <i>should</i> give the same result as the method described by <a href="http://www.indiana.edu/%7Ekruschke/BEST/">Kruschke (2012)</a> I don't guarantee that it <i>does</i>. Use the version freely available on his <a href="http://www.indiana.edu/%7Ekruschke/BEST/">site</a>. If you want to know more about Bayesian statistics do check out his <a href="http://www.indiana.edu/%7Ekruschke/DoingBayesianDataAnalysis/">book</a>, which is great, or some of the <a href="http://stats.stackexchange.com/questions/125/what-is-the-best-introductory-bayesian-statistics-textbook">many other good introductory texts</a>.
+                </div>
+                <div id="about_div" class="sg-8 borderRight">
+                    <b>About.</b>
+                    This page was made for fun by me, Rasmus Bååth, a PHD student at <a href="http://www.lucs.lu.se/">Lund University Cognitive Science</a>, Sweden. Libraries used: <a href="http://www.jstat.org/">jStat</a> for probability distributions, <a href="http://www.flotcharts.org/">Flot</a> for plotting and <a href="http://jquery.com/">JQuery</a> for this and that. For css styling I used <a href="http://thesquaregrid.com/">the Square Grid framework</a>. If you have any suggestions for improvements feel free to <a href="mailto:rasmus.baath@lucs.lu.se">drop me a message</a>.
+                    
+                </div>
+            </div>
+            <div class="sg-35 about "></div>
+            <div class="sg-35 about "><br><span xmlns:dct="http://purl.org/dc/terms/" href="http://purl.org/dc/dcmitype/InteractiveResource" property="dct:title" rel="dct:type">Coded by <a xmlns:cc="http://creativecommons.org/ns#" href="http://sumsar.net/" property="cc:attributionName" rel="cc:attributionURL">Rasmus Bååth</a> 2012.<br> Licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/deed.en_US">Creative Commons Attribution-ShareAlike 3.0 Unported License</a>.</span></div>
+            
+        </div><!-- end #container -->
+
+    </div><!-- end #wrapper -->
+
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-15535612-4']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+    
+
+</body></html>
