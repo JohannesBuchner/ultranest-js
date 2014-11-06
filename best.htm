@@ -82,21 +82,6 @@ body { font-family: sans-serif; background-color:#f4f4f4; font-size:15px; line-h
 
         var sampler = new amwg(inits, posterior, data_calc)
 
-        function burn_asynch(n) {
-            sampler.burn(500)
-            write_log("*")
-            if(n > 0) {
-                burn_timeout_id = setTimeout(function() {burn_asynch(n - 1)}, 0)
-            } else {
-                write_log("\n-- Finished Burn in phase --\n")
-                write_log("\n-- Started sampling phase --\n")
-                $("#diff_plots_div").show();
-                sample_timeout_id = sampler.n_samples_asynch(n_samples, 50)
-                plot_asynch()
-            }
-        }
-        
-
         function plot_asynch() {
             var plot_start_time = new Date()
             var chain = sampler.get_chain()
@@ -118,8 +103,12 @@ body { font-family: sans-serif; background-color:#f4f4f4; font-size:15px; line-h
             }
         }
 
-        write_log("-- Started Burn in phase --\n")
-        burn_asynch(Math.ceil(n_burnin /  500))
+        //write_log("-- Started Burn in phase --\n")
+        //burn_asynch(Math.ceil(n_burnin /  500))
+        $("#diff_plots_div").show();
+        sample_timeout_id = sampler.n_samples_asynch(n_samples, 50)
+        plot_asynch()
+
     }
 </script>
 </head>

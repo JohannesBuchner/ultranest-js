@@ -5,6 +5,13 @@
  * http://creativecommons.org/licenses/by-sa/3.0/deed.en_US
  */
 
+/* and this function is also in here, for data parsing */
+function string_to_num_array(s) {
+    s = s.replace(/[^-1234567890.]+$/, '').replace(/^[^-1234567890.]+/, '')
+    return jStat.map(s.split(/[^-1234567890.]+/), function(x) {return parseFloat(x)})
+}
+
+
 function histogram_counts(x, breaks) {
     var min = jStat.min(x)
     var max = jStat.max(x)
