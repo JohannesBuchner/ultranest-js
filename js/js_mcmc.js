@@ -6,7 +6,7 @@
  */
 
 // Constructor for the adaptive metropolis within Gibbs
-function amwg(start_values, posterior, data_calc) {
+function amwg(start_values, transform, likelihood, data_calc) {
     var n_params = start_values.length
     var batch_count = 0
     var batch_size = 50
@@ -22,22 +22,32 @@ function amwg(start_values, posterior, data_calc) {
     }
 
     function next_sample() {
+        curr_state_t = transform(curr_state)
         if(data_calc != null) {
-            chain.push(curr_state.concat(data_calc(curr_state)))
+            chain.push(curr_state_t.concat(data_calc(curr_state_t)))
         } else {
-            chain.push(curr_state)
+            chain.push(curr_state_t)
         }
 
         for(var param_i = 0; param_i < n_params; param_i++) {
             var param_prop = jStat.normal.sample(curr_state[param_i] , Math.exp( log_sd[param_i]) )
+            // normalize
+            if (param_prop < 1e-9)
+                param_prop = 1e-9
+            if (param_prop > 1 - 1e-9)
+                param_prop = 1 - 1e-9
+            if (isNaN(param_prop))
+                alert(param_prop)
             var prop = curr_state.slice()
             prop[param_i] = param_prop
             try {
-                var accept_prob = Math.exp(posterior(prop) - posterior(curr_state))
+                var accept_prob = Math.exp(likelihood(transform(prop)) - likelihood(curr_state_t))
             } catch(err) { // Probably SD < 0 or similar...
                 var accept_prob = 0
             }
             if(accept_prob > Math.random()) {
+                //if (param_i == 0)
+                //    alert("accept " + param_i + ": " + curr_state_t + " --> " + transform(prop))
                 acceptance_count[param_i]++
                 curr_state = prop
             } // else do nothing
@@ -48,8 +58,12 @@ function amwg(start_values, posterior, data_calc) {
             for(var param_i = 0; param_i < n_params; param_i++) {
                 if(acceptance_count[param_i] / batch_size > 0.44) {
                     log_sd[param_i] += Math.min(0.01, 1/Math.sqrt(batch_count))
+                    //if (param_i == 0)
+                    //  alert("new acceptance rate for " + param_i + ": " + log_sd[param_i] + " | AR:" + acceptance_count[param_i] / batch_size)
                 } else if(acceptance_count[param_i] / batch_size < 0.44) {
                     log_sd[param_i] -= Math.min(0.01, 1/Math.sqrt(batch_count))
+                    //if (param_i == 0)
+                    //  alert("new acceptance rate for " + param_i + ": " + log_sd[param_i] + " | AR:" + acceptance_count[param_i] / batch_size)
                 }
                 acceptance_count[param_i] = 0 
             }
@@ -60,7 +74,7 @@ function amwg(start_values, posterior, data_calc) {
     this.next_sample = next_sample
 
     this.get_chain = function() {return chain}
-    this.get_curr_state = function() {return curr_state}
+    this.get_curr_state = function() {return transform(curr_state)}
 
     this.burn = function(n) {
         var temp_chain = chain.slice()
@@ -96,30 +110,46 @@ function dt_non_norm(x, mean, sd, df) {
     return 1 / sd * jStat.studentt.pdf( (x - mean) / sd, df)
 }
 
-function make_BEST_posterior_func(y1, y2) {
+function make_BEST_transform_func(y1, y2) {
     data = [y1, y2]
     mean_mu = jStat.mean(y1.concat(y2))
-    sd_mu = jStat.stdev(y1.concat(y2)) * 1000000
+    sd_mu = jStat.stdev(y1.concat(y2)) * 1000
     sigma_low = jStat.stdev(y1.concat(y2)) / 1000
     sigma_high = jStat.stdev(y1.concat(y2)) * 1000
+    rate = 1/29
+    
+    var transform = function(cube) {
+        params = cube.slice()
+        for(var group = 0; group < 2; group++) {
+            params[group] = jStat.normal.inv(cube[group], mean_mu, sd_mu)
+            params[2+group] = cube[2+group] * (sigma_high - sigma_low) + sigma_low
+        }
+        params[4] = jStat.exponential.inv(cube[4], rate) + 1
+        for(var i = 0; i < params.length; i++) {
+            if (isNaN(cube[i]) || isNaN(params[i])) alert("nan in transform[" + i + "]: " + cube[i] + " --> " + params[i])
+        }
+        return params
+    }
+    return transform
+}
 
+function make_BEST_likelihood_func(y1, y2) {
+    data = [y1, y2]
 
-    var posterior = function(params) {
+    var likelihood = function(params) {
         var mu = [params[0], params[1]]
         var sigma = [params[2], params[3]]
         var nu = params[4]
         var log_p = 0
-        log_p += Math.log(jStat.exponential.pdf( nu - 1, 1/29 ))
         for(var group = 0; group < 2; group++) {
-            log_p += Math.log(jStat.uniform.pdf( sigma[group], sigma_low, sigma_high ))
-            log_p += Math.log(jStat.normal.pdf( mu[group], mean_mu, sd_mu ))
             for(var subj_i = 0; subj_i < data[group].length; subj_i++) {
                 log_p += Math.log(dt_non_norm(data[group][subj_i], mu[group], sigma[group], nu ))
             }
         }
+        // alert("likelihood:" + params + " --> " + log_p)
         return log_p
     }
 
-    return posterior
+    return likelihood
 }
 

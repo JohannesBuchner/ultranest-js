@@ -67,7 +67,8 @@ body { font-family: sans-serif; background-color:#f4f4f4; font-size:15px; line-h
             return
         }
 
-        var posterior = make_BEST_posterior_func(y1, y2)
+        var transform = make_BEST_transform_func(y1, y2)
+        var likelihood = make_BEST_likelihood_func(y1, y2)
 
         // Function to calculate some more statistics from the chain
         var data_calc = function(params) {
@@ -75,24 +76,23 @@ body { font-family: sans-serif; background-color:#f4f4f4; font-size:15px; line-h
             var sd_diff = params[2] - params[3]
             var effect_size = (params[0] - params[1]) / Math.sqrt((Math.pow(params[2], 2) + Math.pow(params[3], 2)) / 2 )
             var normality = Math.log(params[4]) / Math.LN10
+            for(var i = 0; i < params.length; i++) {
+                if (isNaN(mu_diff) || isNaN(params[i])) alert("nan in data_calc[" + i + "]: " + mu_diff + " --> " + params[i])
+            }
             return [mu_diff, sd_diff, normality, effect_size]
         }
 
-        var inits = [jStat.mean(y1), jStat.mean(y2), jStat.stdev(y1), jStat.stdev(y2), 5]
+        //var inits = [jStat.mean(y1), jStat.mean(y2), jStat.stdev(y1), jStat.stdev(y2), 5]
+        var inits = [0.5, 0.5, 0.5, 0.5, 0.5]
 
-        var sampler = new amwg(inits, posterior, data_calc)
+        var sampler = new amwg(inits, transform, likelihood, data_calc)
 
         function plot_asynch() {
             var plot_start_time = new Date()
             var chain = sampler.get_chain()
             var plot_data = chain_to_plot_data(chain, Math.ceil(n_samples / 1000))
             plot_mcmc_chain("group_diff_plot", plot_data[5], "samples")
-            //plot_mcmc_chain("plot3", plot_data[2] , "title2")
-            //plot_mcmc_chain("plot5", plot_data[4], "title3")
-
-            plot_mcmc_hist("group_diff_hist", param_chain(chain, 5), true, 0)
-            //plot_mcmc_hist("plot4", param_chain(sampler.get_chain(), 2), true)
-            //plot_mcmc_hist("plot6", param_chain(sampler.get_chain(), 4), true)
+            plot_mcmc_hist("group_diff_hist", param_chain(chain, 5).slice(chain.length / 2), true, 0)
             
             var plot_time = (new Date()) - plot_start_time
             if(sampler.is_running_asynch()) {

@@ -15,12 +15,17 @@ function string_to_num_array(s) {
 function histogram_counts(x, breaks) {
     var min = jStat.min(x)
     var max = jStat.max(x)
+    if (max == min) {
+       max = min * 1.01 + 0.01
+    }
     var bins = []
+    //alert("min:" + min + " max:" + max + " for: " + x)
     for(var i =0; i < breaks; i++) {bins.push([min + i/(breaks) * (max - min) + (max - min) / breaks / 2, 0])}
     for(var i = 0; i < x.length; i++) {
         bin_i = Math.floor((x[i] - min) / (max - min) * breaks)
         if(bin_i > breaks - 1) {bin_i = breaks - 1}
         if(bin_i < 0) {bin_i = 0}
+        //alert(bin_i + " of " + breaks + " for " + x[i] + " between " + min + " and " + max)
         bins[bin_i][1]++
     }
     return bins
