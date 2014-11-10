@@ -8,7 +8,7 @@ Features of the framework
 --------------------------
 * Web tools are **interactive**, the user can choose or enter data
 * Web tools are **easily accessible**, the user does not have to compile or download anything (low setup cost) and can play with data without effort.
-* With RadFriends / Nested Sampling (http://arxiv.org/abs/1407.5459) you do not need to worry about convergence, this is handled safely. 
+* With RadFriends / Nested Sampling (http://arxiv.org/abs/1407.5459) you do not need to worry about convergence, this is handled safely.
 * You can also do **parameter estimation** -- posterior samples are computed for you.
 * *Beware*: RadFriends becomes inefficient for high-dimensional problems. 
   Depending on your specific problem, that may become limiting already at 5 dimensions. 
@@ -16,6 +16,8 @@ Features of the framework
 
 About the demo
 --------------------------
+**Try it out**: https://johannesbuchner.github.io/ultranest-js/twodist.html
+
 I show an application where the user can enter two data sets.
 Two models are compared. In the first model, all data are generated from a normal distribution with unknown parameters (2 parameters).
 In the second model, the two data sets are each generated from a normal distribution with unknown parameters (4 parameters).
