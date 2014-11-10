@@ -89,7 +89,7 @@ function plot_mcmc_chain(div_id, plot_data, title) {
 }
 
 function plot_mcmc_hist(div_id, param_data, show_hdi, comp_value, xlim) {
-    var bar_data = histogram_counts(param_data, 30)
+    var bar_data = histogram_counts(param_data, 20)
     var bar_width = bar_data[1][0] - bar_data[0][0]
 
     var mean = jStat.mean(param_data)

@@ -34,14 +34,16 @@ function logaddexp(a, b) {
 
 function compute_distance(acoords, bcoords) {
 	var distsq = 0
-	for(var j = 0; j < acoords.length; j++)
+	var n = acoords.length
+	for(var j = 0; j < n; j++)
 		distsq += (acoords[j] - bcoords[j]) * (acoords[j] - bcoords[j])
 	return distsq
 }
 
 function compute_distance_lt(acoords, bcoords, maxsqdistance) {
 	var distsq = 0
-	for(var j = 0; j < acoords.length; j++) {
+	var n = acoords.length
+	for(var j = 0; j < n; j++) {
 		distsq += (acoords[j] - bcoords[j]) * (acoords[j] - bcoords[j])
 		if (distsq > maxsqdistance)
 			return false
@@ -50,12 +52,13 @@ function compute_distance_lt(acoords, bcoords, maxsqdistance) {
 }
 
 function nearest_rdistance_guess(ndim, live_points) {
-	var maxsqdistance = 0.0;
-	for(var i = 0; i < live_points.length; i++) {
+	var maxsqdistance = 0.0
+	var n = live_points.length
+	for(var i = 0; i < n; i++) {
 		// leave ith point out
 		var mindistance = 1e300
 		var nonmember = live_points[i]
-		for (var k = 0; k < live_points.length; k++) {
+		for (var k = 0; k < n; k++) {
 			if (k == i)
 				continue;
 			var dist = compute_distance(live_points[k].coords, nonmember.coords)
@@ -64,7 +67,7 @@ function nearest_rdistance_guess(ndim, live_points) {
 		}
 		maxsqdistance = Math.max(mindistance, maxsqdistance)
 	}
-	// console.log("nearest_rdistance_guess: " + maxsqdistance + " from " + live_points.length)
+	// console.log("nearest_rdistance_guess: " + maxsqdistance + " from " + n)
 	return maxsqdistance
 }
 function random_normal_vector(ndim) {
@@ -116,7 +119,7 @@ function radfriends_drawer(ndim, transform, likelihood) {
 			console.log("friends not used because maxsqdistance is " + this.maxsqdistance)
 			return true;
 		}
-		for (var i = 0; i < members.length; i++) {
+		for (var i = 0, n = members.length; i < n; i++) {
 			if (compute_distance_lt(members[i].coords, current.coords, this.maxsqdistance))
 				return true
 		}
@@ -148,13 +151,14 @@ function radfriends_drawer(ndim, transform, likelihood) {
 	this.count_inside = _count_inside
 	function _generate_direct(current, members) {
 		var ntotal = 0
+		var n = members.length
 		while(1) {
 			for(var j = 0; j < ndim; j++) {
 				current.coords[j] = random_uniform() * (this.region_high[j] - this.region_low[j]) + this.region_low[j]
 				current.phys_coords[j] = current.coords[j]
 			}
 			ntotal += 1
-			if (members.length == 0) {
+			if (n == 0) {
 				console.log("generate_direct(): No friends available for checking!")
 				return ntotal
 			}
@@ -168,9 +172,10 @@ function radfriends_drawer(ndim, transform, likelihood) {
 	
 	function _generate_from_friends(current, members) {
 		var ntotal = 0
+		var n = members.length
 		while(1) {
 			ntotal += 1
-			member = members[random_int(0, members.length - 1)]
+			member = members[random_int(0, n - 1)]
 			var direction = random_normal_vector(ndim)
 			var radius = Math.sqrt(this.maxsqdistance) * Math.pow(random_uniform(), 1.0/ndim)
 			for(var j = 0; j < ndim; j++) {
@@ -192,6 +197,7 @@ function radfriends_drawer(ndim, transform, likelihood) {
 	function _next(current, live_points) {
 		this.niter += 1
 		var Lmin = current.L
+		var n = live_points.length
 		// console.log("drawer: next() iteration " + this.niter + " - " + Lmin)
 		if (!(this.maxsqdistance > 0) || (this.niter % 20 == 1)) {
 			// console.log("drawer: next(): recomputing maxsqdistance")
@@ -201,7 +207,7 @@ function radfriends_drawer(ndim, transform, likelihood) {
 			for (var j = 0; j < ndim; j++) {
 				var low = 1
 				var high = 0
-				for (var i = 0; i < live_points.length; i++) {
+				for (var i = 0; i < n; i++) {
 					var p = live_points[i]
 					low = Math.min(low, p.coords[j])
 					high = Math.max(high, p.coords[j])
