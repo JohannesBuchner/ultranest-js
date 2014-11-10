@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<script type="text/javascript" src="js/jquery-1.8.3.min.js"></script>
+<script type="text/javascript" src="js/jquery.flot.min.js"></script>
+<script type="text/javascript" src="js/jstat.js"></script>
+<script type="text/javascript" src="js/plot.js"></script>
+<script type="text/javascript" src="js/js_nested2.js"></script>
+<script type="text/javascript">
+    allresults = [NaN, NaN]
+    function finalresults() {
+    	if (isFinite(allresults[0]) && isFinite(allresults[1])) {
+    		Z2 = allresults[0]
+    		Z4 = allresults[1]
+    		if (Z4 - Z2 > Math.log(100)) {
+    			alert("Two distribution model significantly preferred!")
+    		} else {
+    			alert("Single distribution model sufficient!")
+    		}
+    	}
+    }
+    function parse_results(results) {
+	var samples = posterior_samples(results[2], 1000)
+	var means = jStat(samples).mean()
+	var stdevs = jStat(samples).stdev()
+	var text = "<p>evidence ln Z = " + results[0] + " +- " + results[1]
+	text = text + "<p>samples (" + samples.length + "): first is " + samples[0]
+	text = text + "<p>means: <ol>"
+	for (var i = 0; i < means.length; i++) {
+		text = text + "<li>" + means[i]
+	}
+	text = text + "</ol><p>stdevs: <ol>"
+	for (var i = 0; i < stdevs.length; i++) {
+		text = text + "<li>" + stdevs[i]
+	}
+	text = text + "</ol>"
+	return [text, samples]
+    }
+    function run2() {
+    	var myWorker = new Worker("js/worker.js")
+	myWorker.onmessage = function (oEvent) {
+		if (oEvent.data[0] == "progress") {
+			$("#results2").html("progress: iteration " + oEvent.data[1])
+		}
+		else if (oEvent.data[0] == "done") {
+			console.log("got results")
+			var results = parse_results(oEvent.data[1])
+			var text = results[0]
+			var samples = results[1]
+			$("#results2").html(text)
+			plot_mcmc_hist("group_same_hist1", param_chain(samples, 0), false, null)
+			plot_mcmc_hist("group_same_hist2", param_chain(samples, 1), false, null)
+			allresults[0] = oEvent.data[1][0]
+			finalresults()
+			console.log("done")
+		} else {
+			console.log("strange message: " + oEvent.data)
+		}
+	}
+	myWorker.postMessage("2")
+    }
+    function run4() {
+    	var myWorker = new Worker("js/worker.js")
+	myWorker.onmessage = function (oEvent) {
+		if (oEvent.data[0] == "progress") {
+			$("#results4").html("progress: iteration " + oEvent.data[1])
+		}
+		else if (oEvent.data[0] == "done") {
+			console.log("got results")
+			var results = parse_results(oEvent.data[1])
+			var text = results[0]
+			var samples = results[1]
+			$("#results4").html(text)
+			plot_mcmc_hist("group_diff_hist1", param_chain(samples, 0), false, null)
+			plot_mcmc_hist("group_diff_hist2", param_chain(samples, 1), false, null)
+			plot_mcmc_hist("group_diff_hist3", param_chain(samples, 2), false, null)
+			plot_mcmc_hist("group_diff_hist4", param_chain(samples, 3), false, null)
+			allresults[1] = oEvent.data[1][0]
+			finalresults()
+			console.log("done")
+		} else {
+			console.log("strange message: " + oEvent.data)
+		}
+	}
+	myWorker.postMessage("4")
+    }
+    function run() {
+    	run2()
+    	run4()
+    }
+    window.onload = run
+</script>
+</head>
+<body>
+	<div style="float: left; width: 50%">
+	<h3>Two distributions</h3>
+	<div id="results4"></div>
+	<div id="group_diff_hist1_wrapper_div" class="sg-11">
+		<div class="item_title">Mean 1</div>
+		<div id="group_diff_hist1" style="height: 200px; width: 200px;"></div>
+		<div class="item_description"></div>
+	</div>
+	<div id="group_diff_hist2_wrapper_div" class="sg-11">
+		<div class="item_title">Mean 2</div>
+		<div id="group_diff_hist2" style="height: 200px; width: 200px;"></div>
+		<div class="item_description"></div>
+	</div>
+	<div id="group_diff_hist3_wrapper_div" class="sg-11">
+		<div class="item_title">Sigma 1</div>
+		<div id="group_diff_hist3" style="height: 200px; width: 200px;"></div>
+		<div class="item_description"></div>
+	</div>
+	<div id="group_diff_hist4_wrapper_div" class="sg-11">
+		<div class="item_title">Sigma 2</div>
+		<div id="group_diff_hist4" style="height: 200px; width: 200px;"></div>
+		<div class="item_description"></div>
+	</div>
+	</div>
+	<div style="float: left; width: 50%">
+	<h3>Single distribution</h3>
+	<div id="results2"></div>
+	<div id="group_same_hist1_wrapper_div" class="sg-11">
+		<div class="item_title">Mean</div>
+		<div id="group_same_hist1" style="height: 200px; width: 200px;"></div>
+		<div class="item_description"></div>
+	</div>
+	<div id="group_same_hist2_wrapper_div" class="sg-11">
+		<div class="item_title">Sigma</div>
+		<div id="group_same_hist2" style="height: 200px; width: 200px;"></div>
+		<div class="item_description"></div>
+	</div>
+	</div>
+</body>
+</html>
