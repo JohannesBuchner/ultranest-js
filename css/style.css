@@ -8,4 +8,5 @@ font-family: "Georgia", serif;
 input#submit {
 font-weight: bold;
 margin: 1em 2em;
+padding: 5px 3px;
 }
