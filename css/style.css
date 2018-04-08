@@ -1,0 +1,11 @@
+legend {
+font-size: x-large;
+font-style: italic;
+}
+body {
+font-family: "Georgia", serif;
+}
+input#submit {
+font-weight: bold;
+margin: 1em 2em;
+}

@@ -215,7 +215,7 @@ function radfriends_drawer(ndim, transform, likelihood) {
 				this.region_low[j] = Math.max(0, low - Math.sqrt(this.maxsqdistance))
 				this.region_high[j] = Math.min(1, high + Math.sqrt(this.maxsqdistance))
 			}
-			console.log("drawer: next(): new maxsqdistance: " + this.maxsqdistance)
+			// console.log("drawer: next(): new maxsqdistance: " + this.maxsqdistance)
 		}
 		var ntoaccept = 0
 		if (this.phase == 0) {

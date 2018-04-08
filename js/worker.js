@@ -10,7 +10,7 @@ importScripts('jstat.js', 'problem2.js', 'js_nested2.js');
 // var y2 = [1.83, 1.93, 1.88, 1.85, 1.85, 1.91, 1.91, 1.85, 1.78, 1.91, 1.93, 1.80, 1.80, 1.85, 1.93, 1.85, 1.83, 1.85, 1.91, 1.85, 1.91, 1.85, 1.80, 1.80, 1.85]
 
 function run_nested(ndim, transform, likelihood) {
-	integrator = new integrator(ndim, transform, likelihood, null, 400, 0.5, 10000)
+	integrator = new integrator(ndim, transform, likelihood, null, 400, 0.5, 10)
 	var i = 0
 	var r = integrator.progress()
 	while (r != 0) {

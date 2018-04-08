@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Calculator</title>
+
+<!-- for plotting we use flot -->
+<script type="text/javascript" src="js/jquery-1.8.3.min.js"></script>
+<script type="text/javascript" src="js/jquery.flot.min.js"></script>
+<script type="text/javascript" src="js/jstat.js"></script>
+<script type="text/javascript" src="js/plot.js"></script>
+<!-- style of the page -->
+<link rel="stylesheet" href="css/style.css"/>
+
+<!-- we load a data file too -->
+<script src="primes.txt"></script>
+</head>
+
+<body>
+<h1>Powerlaw fitting</h1>
+
+<p>
+This calculator estimates a powerlaw distribution from
+values with uncertainties.
+
+<fieldset><legend>Input</legend>
+<textarea name="values" id="values" rows=20 cols=10 >0.524074820752 0.160181967305
+0.150026547064 0.112035691919
+0.096729559685 0.0355945137459
+0.424898673801 0.123771366923
+0.121857057557 0.0615510021176
+0.241459126869 0.0608092236121
+0.00158461757805 0.000446174712559
+0.00672812862854 0.00197137989161
+0.123254097426 0.0574429608714
+0.00407084920683 0.00138221183603
+0.363875317994 0.116435787853
+0.785530123885 0.201542588227
+0.622715266296 0.227192284561
+0.00154530179767 0.000359632503451
+0.666207473867 0.154292685764
+6.08081782183e-06 1.84899187932e-06
+0.349391229362 0.117048149755
+0.000160758783319 3.27537815638e-05
+0.0926906965723 0.0266056727547
+0.113610276274 0.0461326649429
+</textarea>
+<input type="submit" name="submit" id="submit" value="Run" onclick="recalc();" />
+</fieldset>
+
+<fieldset><legend>Results</legend>
+<div id="progress">(press Run to start computation)
+</div>
+<div id="results">
+</div>
+<!-- html plot -->
+</fieldset>
+
+<script>
+/* data parsing */
+function string_to_num_array(s) {
+    s = s.replace(/[^-1234567890.]+$/, '').replace(/^[^-1234567890.]+/, '')
+    return jStat.map(s.split(/[^-1234567890.]+/), function(x) {return parseFloat(x)})
+}
+function parse_results(results) {
+	var samples = posterior_samples(results[2], 1000)
+	var means = jStat(samples).mean()
+	var stdevs = jStat(samples).stdev()
+	var text = "<p>evidence ln Z = " + results[0] + " +- " + results[1]
+	text = text + "<p>samples (" + samples.length + "): first is " + samples[0]
+	text = text + "<p>means: <ol>"
+	for (var i = 0; i < means.length; i++) {
+		text = text + "<li>" + means[i]
+	}
+	text = text + "</ol><p>stdevs: <ol>"
+	for (var i = 0; i < stdevs.length; i++) {
+		text = text + "<li>" + stdevs[i]
+	}
+	text = text + "</ol>"
+	return [text, samples]
+}
+
+function run(data) {
+	$("#progress").html("progress: starting ... ");
+    	var myWorker = new Worker("js/plworker.js");
+	myWorker.onmessage = function (oEvent) {
+		if (oEvent.data[0] == "progress") {
+			$("#progress").html("progress: iteration " + oEvent.data[1])
+		}
+		else if (oEvent.data[0] == "done") {
+			console.log("got results")
+			$("#progress").html("progress: done")
+			var results = parse_results(oEvent.data[1])
+			var text = results[0];
+			var samples = results[1];
+			$("#results").html(text)
+			console.log("done")
+		} else {
+			console.log("strange message: " + oEvent.data)
+		}
+	}
+	myWorker.postMessage(["run", data])
+}
+
+// main calculation function
+function recalc() {
+	var y1 = string_to_num_array($("#values").val());
+	// generate samples
+	var data = [];
+	for (var i = 0; i < y1.length; i+=2) {
+		var yval = y1[i];
+		var yerr = y1[i+1];
+		var ys = [];
+		for (var j = 0; j < 400; j++) {
+			ys.push(jStat.normal.sample(yval, yerr))
+		}
+		data.push(ys);
+	}
+	run(data);
+	
+	
+}
+recalc();
+</script>
+

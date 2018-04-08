@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Gaussian population distribution from limited measurements</title>
+
+<!-- for plotting we use flot -->
+<script type="text/javascript" src="js/jquery-1.8.3.min.js"></script>
+<script type="text/javascript" src="js/jquery.flot.min.js"></script>
+<script type="text/javascript" src="js/jstat.js"></script>
+<script type="text/javascript" src="js/plot.js"></script>
+<script type="text/javascript" src="js/js_nested2.js"></script>
+<!-- style of the page -->
+<link rel="stylesheet" href="css/style.css"/>
+
+</head>
+
+<body>
+<h1>Gaussian population distribution from limited measurements</h1>
+
+<p>
+This calculator estimates a gaussian from
+values with uncertainties.
+
+<p>The assumption is that the limited sample is drawn from a population, whose parameters (mean, width) are unknown (Jeffreys priors are assumed).
+
+<fieldset><legend>Input</legend>
+<p>Enter measurements in the format: value uperr loerr</p>
+
+<textarea name="values" id="values" rows=20 cols=20>15 7 7
+4 16 15 
+2 6 8 
+11 3 3
+1 6 6
+-2 5 6
+-1 10 10
+-14 6 7
+-39 11 14
+-3 13 14</textarea>
+<p>The default values are from <a href="https://arxiv.org/abs/1803.10237v1">van Dokkum, Nature, 555, 629</a>
+</fieldset>
+
+<input type="submit" name="submit" id="submit" value="Run" onclick="recalc();" />
+
+<fieldset style="min-height: 200px"><legend>Results</legend>
+<div id="progress">(press Run to start computation)
+</div>
+
+<div id="group_same_hist1_wrapper_div" class="sg-11">
+	<div class="item_title" id="resultstext1"></div>
+	<div id="group_same_hist1" style="height: 200px; width: 400px;"></div>
+	<div class="item_description"></div>
+</div>
+<div id="group_same_hist2_wrapper_div" class="sg-11">
+	<div class="item_title" id="resultstext2"></div>
+	<div id="group_same_hist2" style="height: 200px; width: 400px;"></div>
+	<div class="item_description"></div>
+</div>
+
+<div>Download posterior samples:<br/>
+<textarea name="posterior" id="posterior" rows=2 cols=40>(need to run first)</textarea>
+</div>
+
+<!-- html plot -->
+</fieldset>
+
+<div>Powered by <a href="https://github.com/JohannesBuchner/ultranest-js">Ultranest.js</a>, running nested sampling in your browser. Written by <a href="http://astrost.at/istics">Johannes Buchner</a>.
+
+<script>
+/* data parsing */
+function string_to_num_array(s) {
+    s = s.replace(/[^-1234567890.]+$/, '').replace(/^[^-1234567890.]+/, '')
+    return jStat.map(s.split(/[^-1234567890.]+/), function(x) {return parseFloat(x)})
+}
+function store_samples(samples) {
+	var text = "# mean stdev\n";
+	for (var i = 0; i < samples.length; i++) {
+		for (var j = 0; j < samples[i].length; j++) {
+			text = text + samples[i][j] + " "
+		}
+		text = text + "\n"
+	}
+	return text
+}
+function parse_results(results) {
+	var samples = posterior_samples(results[2], 1000)
+	var s = jStat(samples);
+	var means = s.mean()
+	var stdevs = s.stdev()
+	var quantiles = s.quantiles([0.1, 0.5, 0.9])
+	
+	var texts = []
+	var parameters = ["Population mean", "Population width"];
+	for(var i = 0; i < parameters.length; i++) {
+		text = "<h3>" + parameters[i] + "</h3>"
+		sigfigs = Math.ceil(-Math.log10(stdevs[i]))
+		//text = text + "<p>mean = " + Math.round(quantiles[0][1], sigfigs) + " &#177; " + Math.round(stdevs[0], sigfigs)
+		text = text + "<p>" + Math.round(quantiles[i][1], sigfigs) + " <sup>+" + Math.round(quantiles[i][2] - quantiles[i][1], sigfigs) + "</sup><sub>-" + Math.round(quantiles[i][1] - quantiles[i][0], sigfigs) + "</sub>  (uncertainties are given as median and 10/90% quantiles)"
+		texts.push(text)
+	}
+	
+	return [texts, samples]
+}
+
+function run(data) {
+	$("#progress").html("progress: starting ... ");
+    	var myWorker = new Worker("js/gaussworker.js");
+	myWorker.onmessage = function (oEvent) {
+		if (oEvent.data[0] == "progress") {
+			$("#progress").html("Running (iteration " + oEvent.data[1] + ") ...")
+		}
+		else if (oEvent.data[0] == "done") {
+			console.log("got results")
+			$("#progress").html("progress: done")
+			var results = parse_results(oEvent.data[1])
+			var texts = results[0];
+			var samples = results[1];
+			$("#resultstext1").html(texts[0])
+			plot_mcmc_hist("group_same_hist1", param_chain(samples, 0), false, null)
+			$("#resultstext2").html(texts[1])
+			plot_mcmc_hist("group_same_hist2", param_chain(samples, 1), false, null)
+			$("#posterior").val(store_samples(samples))
+			console.log("done")
+		} else {
+			console.log("strange message: " + oEvent.data)
+		}
+	}
+	myWorker.postMessage(["run", data])
+}
+
+// main calculation function
+function recalc() {
+	var y1 = string_to_num_array($("#values").val());
+	// generate samples
+	var data = [];
+	for (var i = 0; i < y1.length; i+=3) {
+		// measurement value and uncertainties
+		var yval = y1[i];
+		var yhierr = y1[i+1];
+		var yloerr = y1[i+2];
+		var ys = [];
+		// get samples of asymmetric gaussian
+		for (var j = 0; j < 400; j++) {
+			var u = jStat.normal.sample(0, 1);
+			var s;
+			if (u < 0) {
+				s = yval + u * yloerr
+			} else {
+				s = yval + u * yhierr
+			}
+			if(!(s>=-100)) {
+				console.log("odd sample: " + u + " transformed with " + yval + " + " + yhierr + " - " + yloerr + " --> " + s)
+				alert("double-check your input")
+				return;
+			}
+			ys.push(s)
+		}
+		data.push(ys);
+	}
+	run(data);
+}
+//recalc();
+</script>
+
