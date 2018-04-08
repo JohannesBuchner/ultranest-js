@@ -54,6 +54,7 @@ values with uncertainties.
 <div id="group_same_hist2_wrapper_div" class="sg-11">
 	<div class="item_title" id="resultstext2"></div>
 	<div id="group_same_hist2" style="height: 200px; width: 400px;"></div>
+	(van Dokkum et al. reported that their distribution width is &lt; 10 with 90% confidence)
 	<div class="item_description"></div>
 </div>
 
@@ -93,7 +94,7 @@ function parse_results(results) {
 	var parameters = ["Population mean", "Population width"];
 	for(var i = 0; i < parameters.length; i++) {
 		text = "<h3>" + parameters[i] + "</h3>"
-		sigfigs = Math.ceil(-Math.log10(stdevs[i]))
+		sigfigs = Math.ceil(-Math.log(stdevs[i])/Math.log(10))
 		//text = text + "<p>mean = " + Math.round(quantiles[0][1], sigfigs) + " &#177; " + Math.round(stdevs[0], sigfigs)
 		text = text + "<p>" + Math.round(quantiles[i][1], sigfigs) + " <sup>+" + Math.round(quantiles[i][2] - quantiles[i][1], sigfigs) + "</sup><sub>-" + Math.round(quantiles[i][1] - quantiles[i][0], sigfigs) + "</sub>  (uncertainties are given as median and 10/90% quantiles)"
 		texts.push(text)
@@ -103,7 +104,7 @@ function parse_results(results) {
 }
 
 function run(data) {
-	$("#progress").html("progress: starting ... ");
+	$("#progress").html("Starting run ... please be patient");
     	var myWorker = new Worker("js/gaussworker.js");
 	myWorker.onmessage = function (oEvent) {
 		if (oEvent.data[0] == "progress") {
